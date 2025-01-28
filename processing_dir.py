@@ -1,13 +1,10 @@
 import os
 from escape_to_safe_slug import revert_escape, safe_slug, escape_slug
 import shutil
+import argparse
 
-# Directory to scan for subdirectories
-base_dir = '/export'
-suffix = '-filestore'
-exclude_dir_lists = ['_shared']
 
-def get_subdir_paths_with_suffix(base_dir, suffix):
+def get_subdir_paths_with_suffix(base_dir, suffix='-filestore'):
     matching_paths = []
 
     if not os.path.exists(base_dir):
@@ -51,18 +48,19 @@ def is_old_schema(name):
             return True
         return False
     except Exception:
-        print(f"Could not decode the username with assuming the username was encoded with escaped logic. ")
+        print(f"Could not decode the username by assuming the username was encoded with escaped logic. ")
         return False
     
 
 
 def process_subdir_name(name, path, force=False):
     """
-    To do: need to insert the escape_to_safe slug logic here. 
+    Determine whether or not the user also has a directory in the same filesystem that has the new scheme.
+    ---a. If a directory with the new scheme exists, move the old directory into the new one and name it _old_home
+    ---b. If a directory with the new scheme does not exist, rename the old directory to one using the new scheme 
     """
-    print("-------- Processing ", path, "  --------")
-    if not force:
-        print("Dry run. No change is made. ")
+
+    print("========  Processing ", path, "  ========")
     ## Check if old or new schema
     is_old = is_old_schema(name)
     
@@ -110,7 +108,11 @@ def process_subdir_name(name, path, force=False):
         print(f"Skipping '{path}'")
         
 
-def rename_subdirs(base_dirs, exclude_dir_lists):
+def rename_subdirs(base_dirs = "/Users/la-yijunge/Downloads/export", exclude_dir_lists = ["_shared"], force=False):
+    if not force:
+        print("================== This is a dry run. No changes are made. ================ ")
+    else:
+        print("================== This is NOT a dry run. Directories will be moved. =============== ")
     for base_dir in base_dirs:
         # Check if the base directory exists
         if not os.path.exists(base_dir):
@@ -120,17 +122,28 @@ def rename_subdirs(base_dirs, exclude_dir_lists):
         for subdir in os.listdir(base_dir):
             subdir_path = os.path.join(base_dir, subdir)
             if os.path.isdir(subdir_path) and subdir not in exclude_dir_lists:
-                process_subdir_name(subdir, subdir_path)
+                process_subdir_name(subdir, subdir_path, force)
 
 def main():
+    """
+    Dry run without the --force flag: 
+        python3 processing_dir.py --base_dir /export 
+    Real run that actually makes changes to the directories.
+        python3 processing_dir.py --base_dir /export --force
+    """
+    parser = argparse.ArgumentParser(description="Process directory names.")        
+    parser.add_argument('--base_dir', help="The base dir to process, /export is the base dir on the nfs server", default='/export') 
+    parser.add_argument('--suffix', help="suffix of the subdirectories to traverse, directories that end with '-filestore' holds data.", default='-filestore') 
+    parser.add_argument('--force', action='store_true', help="Force execution of move and rename operations", default=False) 
+    parser.add_argument('--exclude_dir_lists', nargs='*', help="dirs to skip. For example, '_shared'.", default=["_shared"])
+    args = parser.parse_args()
+
+
     # Get all subdirectories with the suffix '-filestore'
-    matching_subdirs = get_subdir_paths_with_suffix(base_dir, suffix)
+    matching_subdirs = get_subdir_paths_with_suffix(args.base_dir, args.suffix)
 
     # Get all 'prod' directories inside matching subdirectories
-    #prod_directories = generate_prod_paths(matching_subdirs)
-
-    ## Testing a single directory
-    prod_directories = ['/export/biology-filestore/biology/prod']
+    prod_directories = generate_prod_paths(matching_subdirs)
 
     # Output the found 'prod' directories
     if prod_directories:
@@ -141,7 +154,7 @@ def main():
         print("No 'prod' directories found.")
 
     # Rename subdirectories based on the escape_to_safe_slug logic
-    rename_subdirs(prod_directories, exclude_dir_lists)
+    rename_subdirs(prod_directories, args.exclude_dir_lists, args.force)
 
     ## Test a specific directory
     #rename_subdirs(['/export/biology-filestore/biology/prod'], exclude_dir_lists)
