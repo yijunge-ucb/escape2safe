@@ -13,12 +13,13 @@ _alphanum_lower = tuple(string.ascii_lowercase + string.digits)
 
 # patterns _do not_ need to cover length or start/end conditions,
 # which are handled separately
-_object_pattern = re.compile(r'^[a-z0-9\-]+$')
-_label_pattern = re.compile(r'^[a-z0-9\.\-_]+$', flags=re.IGNORECASE)
+_object_pattern = re.compile(r"^[a-z0-9\-]+$")
+_label_pattern = re.compile(r"^[a-z0-9\.\-_]+$", flags=re.IGNORECASE)
 # match anything that's not lowercase alphanumeric (will be stripped, replaced with '-')
-_non_alphanum_pattern = re.compile(r'[^a-z0-9]+')
+_non_alphanum_pattern = re.compile(r"[^a-z0-9]+")
 
 _hash_length = 8
+
 
 def escape(to_escape, safe=SAFE, escape_char=ESCAPE_CHAR, allow_collisions=False):
     if isinstance(to_escape, bytes):
@@ -35,7 +36,7 @@ def escape(to_escape, safe=SAFE, escape_char=ESCAPE_CHAR, allow_collisions=False
             stacklevel=2,
         )
         safe.remove(escape_char)
-    
+
     chars = []
     for c in to_escape:
         if c in safe:
@@ -44,13 +45,15 @@ def escape(to_escape, safe=SAFE, escape_char=ESCAPE_CHAR, allow_collisions=False
             chars.append(_escape_char(c, escape_char))
     return "".join(chars)
 
+
 def escape_slug(name):
     """Generate a slug with the legacy system, safe_slug is preferred."""
     return escape(
         name,
         safe=_escape_slug_safe_chars,
-        escape_char='-',
+        escape_char="-",
     ).lower()
+
 
 def _escape_char(c, escape_char):
     buf = []
@@ -65,7 +68,7 @@ def revert_escape(escaped_str, escape_char=ESCAPE_CHAR):
     i = 0
     while i < len(escaped_str):
         if escaped_str[i] == escape_char:
-            hex_value = escaped_str[i+1:i+3]
+            hex_value = escaped_str[i + 1 : i + 3]
             if len(hex_value) == 2 and all(c in string.hexdigits for c in hex_value):
                 byte_value = int(hex_value, 16)
                 decoded_chars.append(bytes([byte_value]).decode("utf-8"))
@@ -102,8 +105,9 @@ def _extract_safe_name(name, max_length):
         safe_name = "x-" + safe_name[: max_length - 2]
     if not safe_name:
         # make sure it's non-empty
-        safe_name = 'x'
+        safe_name = "x"
     return safe_name
+
 
 def strip_and_hash(name, max_length=32):
     """Generate an always-safe, unique string for any input
@@ -122,6 +126,7 @@ def strip_and_hash(name, max_length=32):
     # use '---' to avoid colliding with `{username}--{servername}` template join
     return f"{safe_name}---{name_hash}"
 
+
 def is_valid_default(s):
     """Strict is_valid
 
@@ -132,6 +137,7 @@ def is_valid_default(s):
     which is always also a valid label value.
     """
     return is_valid_object_name(s)
+
 
 def _is_valid_general(
     s, starts_with=None, ends_with=None, pattern=None, min_length=None, max_length=None
@@ -152,6 +158,7 @@ def _is_valid_general(
         return False
     return True
 
+
 def is_valid_object_name(s):
     """is_valid check for object names
 
@@ -171,6 +178,7 @@ def is_valid_object_name(s):
         max_length=63,
         min_length=1,
     )
+
 
 def is_valid_label(s):
     """is_valid check for label values"""
@@ -198,7 +206,7 @@ def safe_slug(name, is_valid=is_valid_default, max_length=None):
     1. validity, and
     2. no collisions
     """
-    if '--' in name:
+    if "--" in name:
         # don't accept any names that could collide with the safe slug
         return strip_and_hash(name, max_length=max_length or 32)
     # allow max_length override for truncated sub-strings
@@ -206,8 +214,3 @@ def safe_slug(name, is_valid=is_valid_default, max_length=None):
         return name
     else:
         return strip_and_hash(name, max_length=max_length or 32)
-
-
-
-
-
